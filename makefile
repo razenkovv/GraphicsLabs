@@ -17,3 +17,6 @@ link: main.o
 
 clean:
 	rm -rf $(TARGET) *.o
+
+# make all
+# make run

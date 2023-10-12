@@ -8,19 +8,27 @@ int main() {
 
   WinInstance w(window);
 
-  // std::vector<Point<int>> vertex{Point(100, 100), Point(200, 50), Point(600, 200), Point(780, 500), Point(300, 570), Point(123, 300), Point(100, 100)};
+  //simple polygon 
+  // std::vector<Point<int>> vertex{Point(100, 100), Point(200, 50), Point(600, 200), Point(780, 500), Point(300, 570), Point(123, 300), Point(100, 100)}; 
+  
+  //nonsimple polygon
   std::vector<Point<int>> vertex{Point(400, 25), Point(700, 550), Point(200, 100), Point(700, 100), Point(50, 550), Point(400, 25)};
 
+  //Bresenham algorithm
   // w.lineBresenham(Point(500, 256), Point(100, 567), sf::Color::Black);
   // w.lineBresenham(Point(678, 523), Point(100, 111), sf::Color::Red);
   // w.lineBresenham(Point(345, 123), Point(742, 1), sf::Color::Green);
 
+  //polygon draw
   w.polygon(vertex, sf::Color::Black);
 
   if (w.checkConvex(vertex))
     std::cout << "convex" << std::endl;
   else
     std::cout << "nonconvex" << std::endl;
+
+
+  // check lineSegmentsInterception method
 
   // Point<double> p(0.0, 0.0);
   // interceptionType type = w.lineSegmentsInterception(vertex[0], vertex[1], vertex[2], vertex[3], p);
@@ -48,11 +56,13 @@ int main() {
     std::cout << p1.x() << " " << p1.y() << std::endl;
   }
 
+  //get bounding box
   std::vector<Point<int>> boundbox(5);
   w.boundingBox(vertex, boundbox);
   w.polygon(boundbox, sf::Color::Red);
 
-  w.fillPolygon(vertex, methods::NZW, sf::Color::Green);
+  //methods::EO or methods::NZW
+  w.fillPolygon(vertex, methods::EO, sf::Color::Green);
 
   w.drawImage();
 
