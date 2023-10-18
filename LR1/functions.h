@@ -38,7 +38,7 @@ class WinInstance {
   void drawImage(bool update = true);
   void clear(sf::Color color);
 
-  void lineBresenham(const Point<int>& start, const Point<int>& end, const sf::Color& color);
+  void lineBresenham(const Point<int>& s, const Point<int>& e, const sf::Color& color);
 
   void polygon(const std::vector<Point<int>>& vertex, const sf::Color& color);
 
@@ -57,6 +57,8 @@ class WinInstance {
   pointTypeToPolygonEdge pttpe(const Point<int>& p, const Point<int>& p1, const Point<int>& p2);
 
   void fillPolygon(const std::vector<Point<int>>& polygon, const methods& method, const sf::Color& color);
+
+  bool saveImage(const std::string& filename);
 };
 
 template <typename T>

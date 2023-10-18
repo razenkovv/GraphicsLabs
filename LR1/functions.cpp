@@ -44,7 +44,10 @@ void WinInstance::clear(sf::Color color) {
   window.clear(color);
 }
 
-void WinInstance::lineBresenham(const Point<int>& start, const Point<int>& end, const sf::Color& color) {
+void WinInstance::lineBresenham(const Point<int>& s, const Point<int>& e, const sf::Color& color) {
+  Point<int> start(s.x(), s.y());
+  Point<int> end(e.x(), e.y());
+  if (start.x() > end.x()) std::swap(start, end);
   int x, y;
   int ix, iy;
   int dx = abs(end.x() - start.x()), dy = abs(end.y() - start.y());
@@ -60,20 +63,18 @@ void WinInstance::lineBresenham(const Point<int>& start, const Point<int>& end, 
     swapped = true;
   }
 
-  if (dx >= dy) {
-    int error = 2 * dy - dx;
-    for (int i = 0; i <= dx; i++) {
-      if (!swapped)
-        image.setPixel(x, y, color);
-      else
-        image.setPixel(y, x, color);
-      if (error >= 0) {
-        y += iy;
-        error -= 2 * dx;
-      }
-      x += ix;
-      error += 2 * dy;
+  int error = 2 * dy - dx;
+  for (int i = 0; i <= dx; i++) {
+    if (!swapped)
+      image.setPixel(x, y, color);
+    else
+      image.setPixel(y, x, color);
+    if (error >= 0) {
+      y += iy;
+      error -= 2 * dx;
     }
+    x += ix;
+    error += 2 * dy;
   }
 }
 
@@ -209,4 +210,8 @@ void WinInstance::fillPolygon(const std::vector<Point<int>>& polygon, const meth
       }
       break;
   }
+}
+
+bool WinInstance::saveImage(const std::string& filename) {
+  return image.saveToFile(filename);
 }
