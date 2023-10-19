@@ -7,28 +7,28 @@ int main() {
   sf::RenderWindow window(sf::VideoMode(800, 600), "Window");
 
   WinInstance w(window);
-  //simple polygon 
-  //std::vector<Point<int>> vertex{Point(100, 100), Point(200, 50), Point(600, 200), Point(780, 500), Point(300, 570), Point(123, 300), Point(100, 100)};
+  // simple polygon
+  // std::vector<Point<int>> vertex{Point(100, 100), Point(200, 50), Point(600, 200), Point(780, 500), Point(300, 570), Point(123, 300), Point(100, 100)};
 
-  //nonconvex simple polygon
-  // std::vector<Point<int>> vertex{Point(100, 100), Point(400, 400), Point(600, 200), Point(780, 500), Point(300, 570), Point(123, 300), Point(100, 100)};
+  // nonconvex simple polygon
+  //  std::vector<Point<int>> vertex{Point(100, 100), Point(400, 400), Point(600, 200), Point(780, 500), Point(300, 570), Point(123, 300), Point(100, 100)};
 
-  //nonsimple polygon
-  //std::vector<Point<int>> vertex{Point(400, 25), Point(700, 550), Point(200, 100), Point(700, 100), Point(50, 550), Point(400, 25)};
-  //std::vector<Point<int>> vertex{Point(100, 100), Point(200, 200), Point(100, 100)};
+  // nonsimple polygon
+  // std::vector<Point<int>> vertex{Point(400, 25), Point(700, 550), Point(200, 100), Point(700, 100), Point(50, 550), Point(400, 25)};
+  // std::vector<Point<int>> vertex{Point(100, 100), Point(200, 200), Point(100, 100)};
 
-  //Bresenham algorithm
-  //w.lineBresenham(Point(0, 0), Point(3, 8), sf::Color::Black);
-  //w.lineBresenham(Point(3, 8), Point(0, 0), sf::Color::Red);
-  //w.lineBresenham(Point(0, 0), Point(8, 3), sf::Color::Black);
-  //w.lineBresenham(Point(8, 3), Point(0, 0), sf::Color::Red);
-  //w.lineBresenham(Point(9, 0), Point(3, 8), sf::Color::Black);
-  //w.lineBresenham(Point(3, 8), Point(9, 0), sf::Color::Red);
-  // w.lineBresenham(Point(678, 523), Point(100, 111), sf::Color::Red);
-  // w.lineBresenham(Point(345, 123), Point(742, 1), sf::Color::Green);
+  // Bresenham algorithm
+  // w.lineBresenham(Point(0, 0), Point(3, 8), sf::Color::Black);
+  // w.lineBresenham(Point(3, 8), Point(0, 0), sf::Color::Red);
+  // w.lineBresenham(Point(0, 0), Point(8, 3), sf::Color::Black);
+  // w.lineBresenham(Point(8, 3), Point(0, 0), sf::Color::Red);
+  // w.lineBresenham(Point(9, 0), Point(3, 8), sf::Color::Black);
+  // w.lineBresenham(Point(3, 8), Point(9, 0), sf::Color::Red);
+  //  w.lineBresenham(Point(678, 523), Point(100, 111), sf::Color::Red);
+  //  w.lineBresenham(Point(345, 123), Point(742, 1), sf::Color::Green);
 
-  //polygon draw
-  // w.polygon(vertex, sf::Color::Black);
+  // polygon draw
+  //  w.polygon(vertex, sf::Color::Black);
 
   // check convex polygon or not
   // if (w.checkConvex(vertex))
@@ -55,14 +55,14 @@ int main() {
   // }
   // std::cout << p.x() << " " << p.y() << std::endl;
 
-  //check simple polygon or not
-  // Point<double> p1(0.0, 0.0);
-  // if (w.checkPolygonSimpicity(vertex, p1))
-  //   std::cout << "simple" << std::endl;
-  // else {
-  //   std::cout << "nonsimple" << std::endl;
-  //   std::cout << p1.x() << " " << p1.y() << std::endl;
-  // }
+  // check simple polygon or not
+  //  Point<double> p1(0.0, 0.0);
+  //  if (w.checkPolygonSimpicity(vertex, p1))
+  //    std::cout << "simple" << std::endl;
+  //  else {
+  //    std::cout << "nonsimple" << std::endl;
+  //    std::cout << p1.x() << " " << p1.y() << std::endl;
+  //  }
 
   // get bounding box
   // std::vector<Point<int>> boundbox(5);
@@ -71,6 +71,14 @@ int main() {
 
   // methods::EO or methods::NZW
   // w.fillPolygon(vertex, methods::NZW, sf::Color::Green);
+
+  // Bezier curve
+  //std::vector<Point<int>> points{Point(100, 500), Point(200, 100), Point(525, 110), Point(650, 400)};
+  std::vector<Point<int>> points{Point(100, 500), Point(780, 110), Point(20, 100), Point(650, 400)}; // with loop
+  std::vector<Point<int>> vertex{points};
+  vertex.insert(vertex.end(), points[0]);
+  w.polygon(vertex, sf::Color::Red);
+  w.curveBezier3(points, sf::Color::Black);
 
   //w.saveImage("image.png");
   w.drawImage();

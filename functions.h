@@ -77,11 +77,16 @@ class Point {
  public:
   Point() : x_coord(0), y_coord(0) {}
   Point(T x_, T y_) : x_coord(x_), y_coord(y_) {}
+  Point(const Point<T>& p) : x_coord(p.x()), y_coord(p.y()) {}
   T x() const { return x_coord; }
   T y() const { return y_coord; }
   void setx(T x_) { x_coord = x_; }
   void sety(T y_) { y_coord = y_; }
   void print() const { std::cout << x_coord << " " << y_coord << std::endl; }
+  Point<T>& operator=(const Point<T>& p) { x_coord = p.x(); y_coord  = p.y(); return *this; }
+  friend Point<T> operator+(const Point<T>& p1, const Point<T>& p2) { return Point(p1.x() + p2.x(), p1.y() + p2.y()); }
+  friend Point<T> operator*(const Point<T>& p, double a) { return Point(p.x() * a, p.y() * a); }
+  friend Point<T> operator*(double a, const Point<T>& p) { return Point(p.x() * a, p.y() * a); }
 };
 
 template <typename T>

@@ -1,4 +1,5 @@
 #include <limits>
+#include <cmath>
 
 #include "functions.h"
 
@@ -217,5 +218,20 @@ bool WinInstance::saveImage(const std::string& filename) {
 }
 
 void WinInstance::curveBezier3(const std::vector<Point<int>>& points, const sf::Color& color) {
-  
+  if (points.size() != 4) {
+    throw std::runtime_error("\n(curveBezier3) Cubic Bézier curves are plotted for 4 points.");
+  }
+  int H = std::max(abs(points[0].x() - 2 * points[1].x() + points[2].x()) + abs(points[0].y() - 2 * points[1].y() + points[2].y()),
+                   abs(points[1].x() - 2 * points[2].x() + points[3].x()) + abs(points[1].y() - 2 * points[2].y() + points[3].y()));
+  int N = std::ceil(1 + std::sqrt(3 * H));
+  double tau = 1.0 / N;
+  double t = tau;
+  Point<int> p1, p2(points[0]);
+  for (int i = 0; i < N - 1; ++i) {
+    p1 = p2;
+    p2 = std::pow(1 - t, 3) * points[0] + 3 * t * std::pow(1 - t, 2) * points[1] + 3 * std::pow(t, 2) * (1 - t) * points[2] + std::pow(t, 3) * points[3];
+    t += tau;
+    lineBresenham(p1, p2, color);
+  }
+  lineBresenham(p2, points[3], color);
 }
