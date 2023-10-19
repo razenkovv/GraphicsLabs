@@ -14,6 +14,7 @@ enum class interceptionType { SAME, PARALLEL, CROSS, NO_CROSS };
 enum class pointTypeToPolygonEdge { TOUCHING, CROSS_LEFT, CROSS_RIGHT, INESSENTIAL };
 enum class pointToPolygonType { INSIDE, OUTSIDE };
 enum class methods { EO, NZW };
+enum class clockWiseType { CW, CCW, NONCONVEX };
 
 class WinInstance {
  private:
@@ -23,7 +24,7 @@ class WinInstance {
   sf::Image image;
 
   template <typename T>
-  interceptionType lineSegmentWithLineInterception(const Point<T>& a1, const Point<T>& a2, const Point<T>& b1, const Point<T>& b2, double& t);
+  interceptionType linesInterception(const Point<T>& a1, const Point<T>& a2, const Point<T>& b1, const Point<T>& b2, double& t);
 
   pointToPolygonType fillPointEvenOdd(const Point<int>& p, const std::vector<Point<int>>& polygon);
 
@@ -48,9 +49,12 @@ class WinInstance {
   bool checkConvex(const std::vector<Point<int>>& vertex);
 
   template <typename T>
+  interceptionType linesInterceptionCoords(const Point<T>& a1, const Point<T>& a2, const Point<T>& b1, const Point<T>& b2, Point<double>& crossCoords);
+
+  template <typename T>
   interceptionType lineSegmentsInterception(const Point<T>& a1, const Point<T>& a2, const Point<T>& b1, const Point<T>& b2, Point<double>& crossCoords);
 
-  bool checkPolygonSimpicity(const std::vector<Point<int>>& vertex, Point<double>& p);
+  bool checkPolygonSimplicity(const std::vector<Point<int>>& vertex, Point<double>& p);
 
   void boundingBox(const std::vector<Point<int>>& polygon, std::vector<Point<int>>& res);
 
@@ -61,6 +65,10 @@ class WinInstance {
   bool saveImage(const std::string& filename);
 
   void curveBezier3(const std::vector<Point<int>>& points, const sf::Color& color);
+
+  clockWiseType checkClockWise(const std::vector<Point<int>>& vertex);
+
+  bool clipLineCyrusBeck(const std::vector<Point<int>>& polygon, const Point<int>& p1, const Point<int>& p2, Point<int>& p1_new, Point<int>& p2_new);
 };
 
 template <typename T>
@@ -83,10 +91,13 @@ class Point {
   void setx(T x_) { x_coord = x_; }
   void sety(T y_) { y_coord = y_; }
   void print() const { std::cout << x_coord << " " << y_coord << std::endl; }
-  Point<T>& operator=(const Point<T>& p) { x_coord = p.x(); y_coord  = p.y(); return *this; }
+  Point<T>& operator=(const Point<T>& p) {
+    x_coord = p.x();
+    y_coord = p.y();
+    return *this;
+  }
   friend Point<T> operator+(const Point<T>& p1, const Point<T>& p2) { return Point(p1.x() + p2.x(), p1.y() + p2.y()); }
-  friend Point<T> operator*(const Point<T>& p, double a) { return Point(p.x() * a, p.y() * a); }
-  friend Point<T> operator*(double a, const Point<T>& p) { return Point(p.x() * a, p.y() * a); }
+  friend Point<T> operator-(const Point<T>& p1, const Point<T>& p2) { return Point(p1.x() - p2.x(), p1.y() - p2.y()); }
 };
 
 template <typename T>
@@ -112,7 +123,7 @@ pointType WinInstance::pointPositionToLineSegment(const Point<T>& p, const Point
 }
 
 template <typename T>
-interceptionType WinInstance::lineSegmentWithLineInterception(const Point<T>& a1, const Point<T>& a2, const Point<T>& b1, const Point<T>& b2, double& t) {
+interceptionType WinInstance::linesInterception(const Point<T>& a1, const Point<T>& a2, const Point<T>& b1, const Point<T>& b2, double& t) {
   double nx = b2.y() - b1.y();
   double ny = b1.x() - b2.x();
   double denom = nx * (a2.x() - a1.x()) + ny * (a2.y() - a1.y());
@@ -129,14 +140,25 @@ interceptionType WinInstance::lineSegmentWithLineInterception(const Point<T>& a1
 }
 
 template <typename T>
+interceptionType WinInstance::linesInterceptionCoords(const Point<T>& a1, const Point<T>& a2, const Point<T>& b1, const Point<T>& b2, Point<double>& crossCoords) {
+  double t(0.0);
+  interceptionType type = linesInterception(a1, a2, b1, b2, t);
+  if (type == interceptionType::PARALLEL || type == interceptionType::SAME) {
+    return type;
+  }
+  crossCoords.setx(a1.x() + t * (a2.x() - a1.x()));
+  crossCoords.sety(a1.y() + t * (a2.y() - a1.y()));
+}
+
+template <typename T>
 interceptionType WinInstance::lineSegmentsInterception(const Point<T>& a1, const Point<T>& a2, const Point<T>& b1, const Point<T>& b2, Point<double>& crossCoords) {
   double t(0.0);
-  interceptionType type = lineSegmentWithLineInterception(b1, b2, a1, a2, t);
+  interceptionType type = linesInterception(b1, b2, a1, a2, t);
   if (type == interceptionType::SAME || type == interceptionType::PARALLEL)
     return type;
   if (t < 0.0 || t > 1.0)
     return interceptionType::NO_CROSS;
-  lineSegmentWithLineInterception(a1, a2, b1, b2, t);
+  linesInterception(a1, a2, b1, b2, t);
   if (t < 0.0 || t > 1.0)
     return interceptionType::NO_CROSS;
   crossCoords.setx(a1.x() + t * (a2.x() - a1.x()));

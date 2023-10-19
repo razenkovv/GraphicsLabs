@@ -57,7 +57,7 @@ int main() {
 
   // check simple polygon or not
   //  Point<double> p1(0.0, 0.0);
-  //  if (w.checkPolygonSimpicity(vertex, p1))
+  //  if (w.checkPolygonSimplicity(vertex, p1))
   //    std::cout << "simple" << std::endl;
   //  else {
   //    std::cout << "nonsimple" << std::endl;
@@ -72,15 +72,34 @@ int main() {
   // methods::EO or methods::NZW
   // w.fillPolygon(vertex, methods::NZW, sf::Color::Green);
 
-  // Bezier curve
-  //std::vector<Point<int>> points{Point(100, 500), Point(200, 100), Point(525, 110), Point(650, 400)};
-  std::vector<Point<int>> points{Point(100, 500), Point(780, 110), Point(20, 100), Point(650, 400)}; // with loop
-  std::vector<Point<int>> vertex{points};
-  vertex.insert(vertex.end(), points[0]);
-  w.polygon(vertex, sf::Color::Red);
-  w.curveBezier3(points, sf::Color::Black);
+  // // Bezier curve
+  // std::vector<Point<int>> points{Point(100, 500), Point(200, 100), Point(525, 110), Point(650, 400)};
+  // // std::vector<Point<int>> points{Point(100, 500), Point(780, 110), Point(20, 100), Point(650, 400)}; // with loop
+  // std::vector<Point<int>> vertex{points};
+  // vertex.insert(vertex.end(), points[0]);
+  // w.polygon(vertex, sf::Color::Red);
+  // w.curveBezier3(points, sf::Color::Black);
 
-  //w.saveImage("image.png");
+  // Cyrus-Beck clipping
+  std::vector<Point<int>> polygon{Point(100, 500), Point(200, 100), Point(525, 100), Point(650, 400), Point(100, 500)};
+  // std::vector<Point<int>> polygon{Point(100, 500), Point(650, 400), Point(525, 110), Point(200, 100), Point(100, 500)};
+  // Tests
+  Point<int> p1(25, 500), p2(200, 300); // usual
+  // Point<int> p1(25, 500), p2(700, 300); // usual
+  // Point<int> p1(300, 400), p2(200, 300); // inside
+  // Point<int> p1(600, 450), p2(700, 500);  // outside
+  // Point<int> p1(50, 50), p2(200, 50); //parallel
+
+  w.polygon(polygon, sf::Color::Green);
+  w.lineBresenham(p1, p2, sf::Color::Black);
+  Point<int> p1_new, p2_new;
+  if (w.clipLineCyrusBeck(polygon, p1, p2, p1_new, p2_new)) {
+    w.lineBresenham(p1_new, p2_new, sf::Color::Red);
+  } else {
+    std::cout << "segment is outside the polygon" << std::endl;
+  }
+
+  w.saveImage("image.png");
   w.drawImage();
 
   while (w.isOpen()) {

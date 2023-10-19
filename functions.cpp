@@ -1,5 +1,5 @@
-#include <limits>
 #include <cmath>
+#include <limits>
 
 #include "functions.h"
 
@@ -48,7 +48,8 @@ void WinInstance::clear(sf::Color color) {
 void WinInstance::lineBresenham(const Point<int>& s, const Point<int>& e, const sf::Color& color) {
   Point<int> start(s.x(), s.y());
   Point<int> end(e.x(), e.y());
-  if (start.x() > end.x()) std::swap(start, end);
+  if (start.x() > end.x())
+    std::swap(start, end);
   int x, y;
   int ix, iy;
   int dx = abs(end.x() - start.x()), dy = abs(end.y() - start.y());
@@ -98,7 +99,17 @@ bool WinInstance::checkConvex(const std::vector<Point<int>>& vertex) {
   return true;
 }
 
-bool WinInstance::checkPolygonSimpicity(const std::vector<Point<int>>& vertex, Point<double>& p) {
+clockWiseType WinInstance::checkClockWise(const std::vector<Point<int>>& vertex) {
+  if (!checkConvex(vertex))
+    return clockWiseType::NONCONVEX;
+  pointType type = pointPositionToLineSegment(vertex[0], vertex[1], vertex[2]);
+  if (type == pointType::RIGHT)
+    return clockWiseType::CW;
+  else
+    return clockWiseType::CCW;
+}
+
+bool WinInstance::checkPolygonSimplicity(const std::vector<Point<int>>& vertex, Point<double>& p) {
   for (int i = 0; i < vertex.size() - 2; i++) {
     for (int j = 0; j < vertex.size() - 1; j++) {
       if (j != i && j != i + 1 && (j != (i > 0 ? i - 1 : vertex.size() - 2))) {
@@ -229,9 +240,59 @@ void WinInstance::curveBezier3(const std::vector<Point<int>>& points, const sf::
   Point<int> p1, p2(points[0]);
   for (int i = 0; i < N - 1; ++i) {
     p1 = p2;
-    p2 = std::pow(1 - t, 3) * points[0] + 3 * t * std::pow(1 - t, 2) * points[1] + 3 * std::pow(t, 2) * (1 - t) * points[2] + std::pow(t, 3) * points[3];
+    p2.setx(std::round(std::pow(1 - t, 3) * points[0].x() + 3 * t * std::pow(1 - t, 2) * points[1].x() + 3 * std::pow(t, 2) * (1 - t) * points[2].x() +
+                       std::pow(t, 3) * points[3].x()));
+    p2.sety(std::round(std::pow(1 - t, 3) * points[0].y() + 3 * t * std::pow(1 - t, 2) * points[1].y() + 3 * std::pow(t, 2) * (1 - t) * points[2].y() +
+                       std::pow(t, 3) * points[3].y()));
     t += tau;
     lineBresenham(p1, p2, color);
   }
   lineBresenham(p2, points[3], color);
+}
+
+bool WinInstance::clipLineCyrusBeck(const std::vector<Point<int>>& polygon, const Point<int>& p1, const Point<int>& p2, Point<int>& p1_new, Point<int>& p2_new) {
+  Point<double> __tmp__;
+  std::vector<Point<int>> _polygon(polygon.begin(), polygon.end());
+  if (!checkPolygonSimplicity(polygon, __tmp__)) {
+    throw std::runtime_error("\n(clipLineCyrusBeck) Polygon is not simple.");
+  }
+  switch (checkClockWise(polygon)) {
+    case clockWiseType::NONCONVEX:
+      throw std::runtime_error("\n(clipLineCyrusBeck) Polygon is not convex.");
+    case clockWiseType::CCW:
+      std::reverse(_polygon.begin(), _polygon.end());
+      break;
+    case clockWiseType::CW:
+      break;
+  }
+
+  Point<int> s = p2 - p1;
+  double t(0.0), t1(0.0), t2(1.0);
+  for (int i = 0; i < _polygon.size() - 1; i++) {
+    switch (linesInterception(p1, p2, _polygon[i], _polygon[i + 1], t)) {
+      case interceptionType::SAME:
+        return false;
+      case interceptionType::PARALLEL:
+        if (pointPositionToLineSegment(p1, _polygon[i], _polygon[i + 1]) == pointType::LEFT)
+          return false;
+        break;
+      case interceptionType::CROSS:
+        int nx = _polygon[i].y() - _polygon[i + 1].y();
+        int ny = _polygon[i + 1].x() - _polygon[i].x();
+        if (nx * s.x() + ny * s.y() > 0) {
+          t1 = std::max(t, t1);
+        } else {
+          t2 = std::min(t, t2);
+        }
+        break;
+    }
+  }
+  if (t1 <= t2) {
+    p1_new.setx(std::round(p1.x() + t1 * (p2.x() - p1.x())));
+    p1_new.sety(std::round(p1.y() + t1 * (p2.y() - p1.y())));
+    p2_new.setx(std::round(p1.x() + t2 * (p2.x() - p1.x())));
+    p2_new.sety(std::round(p1.y() + t2 * (p2.y() - p1.y())));
+    return true;
+  }
+  return false;
 }
