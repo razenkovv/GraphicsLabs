@@ -213,10 +213,80 @@ void WinInstance::fillPolygon(const std::vector<Point<int>>& polygon, const meth
         }
       }
       break;
+
     case methods::NZW:
       for (int i = boundbox[0].x(); i <= boundbox[2].x(); i++) {
         for (int j = boundbox[0].y(); j <= boundbox[2].y(); j++) {
           if (fillPointNonZeroWinding(Point(i, j), polygon) == pointToPolygonType::INSIDE)
+            image.setPixel(i, j, color);
+        }
+      }
+      break;
+
+    case methods::NONEXTERIOR:
+      std::vector<Point<int>> interceptPolygon;
+      interceptPolygon.reserve(2 * polygon.size());
+      std::vector<bool> interceptFlags;
+      interceptFlags.reserve(2 * polygon.size());
+      std::vector<std::vector<Point<int>>> nextAfterInterception;
+      std::vector<Point<int>> tmp{Point<int>(), Point<int>(), Point<int>(), Point<int>()};
+      nextAfterInterception.reserve(2 * polygon.size());
+
+      for (int i = 0; i < polygon.size() - 1; ++i) {
+        Point<int> a = polygon[i];
+        Point<int> b = polygon[i + 1];
+        interceptPolygon.push_back(a);
+        interceptFlags.push_back(false);
+        nextAfterInterception.push_back(tmp);
+        for (int j = 0; j < polygon.size() - 1; ++j) {
+          Point<double> interceptPoint;
+          if ((j == i) || (j == (i + 1) % (polygon.size() - 1)) || ((j + 1) % (polygon.size() - 1) == i) || (j + 1 == i + 1))
+            continue;
+          if (lineSegmentsInterception(a, b, polygon[j], polygon[j + 1], interceptPoint) == interceptionType::CROSS) {
+            int x = static_cast<int>(interceptPoint.x());
+            int y = static_cast<int>(interceptPoint.y());
+            interceptPolygon.push_back(Point<int>(x, y));
+            interceptFlags.push_back(true);
+            std::vector<Point<int>> points{a, b, polygon[j], polygon[j + 1]};
+            nextAfterInterception.push_back(points);
+          }
+        }
+      }
+      interceptPolygon.push_back(polygon[0]);
+      interceptFlags.push_back(false);
+      nextAfterInterception.push_back(tmp);
+      interceptPolygon.shrink_to_fit();
+      interceptFlags.shrink_to_fit();
+      nextAfterInterception.shrink_to_fit();
+
+      std::vector<Point<int>> resultPolygon;
+      resultPolygon.reserve(interceptPolygon.size());
+      for (int i = 0; i < interceptPolygon.size(); ++i) {
+        resultPolygon.push_back(interceptPolygon[i]);
+        if (interceptFlags[i]) {
+          if (pointPositionToLineSegment(nextAfterInterception[i][2], nextAfterInterception[i][0], nextAfterInterception[i][1]) == pointType::LEFT) {
+            resultPolygon.push_back(nextAfterInterception[i][2]);
+            int j = i;
+            while (interceptPolygon[j].x() != nextAfterInterception[i][2].x() || interceptPolygon[j].y() != nextAfterInterception[i][2].y()) {
+              ++j;
+            }
+            i = j - 1;
+          } else {
+            int j = i;
+            resultPolygon.push_back(nextAfterInterception[i][3]);
+            while (interceptPolygon[j].x() != nextAfterInterception[i][3].x() || interceptPolygon[j].y() != nextAfterInterception[i][3].y()) {
+              ++j;
+            }
+            i = j - 1;
+          }
+        }
+      }
+      resultPolygon.shrink_to_fit();
+      std::vector<Point<int>> boundbox(5);
+      boundingBox(resultPolygon, boundbox);
+      for (int i = boundbox[0].x(); i <= boundbox[2].x(); i++) {
+        for (int j = boundbox[0].y(); j <= boundbox[2].y(); j++) {
+          if (fillPointEvenOdd(Point(i, j), resultPolygon) == pointToPolygonType::INSIDE)
             image.setPixel(i, j, color);
         }
       }
@@ -248,6 +318,33 @@ void WinInstance::curveBezier3(const std::vector<Point<int>>& points, const sf::
     lineBresenham(p1, p2, color);
   }
   lineBresenham(p2, points[3], color);
+}
+
+void WinInstance::curveBspline3(std::vector<Point<int>>& points, const sf::Color& color) {
+  double tau = 0.01;
+  double t = tau;
+  points.insert(points.begin(), Point(2 * points[0].x() - points[1].x(), 2 * points[0].y() - points[1].y()));
+  points.insert(points.end(), Point(2 * points[points.size() - 1].x() - points[points.size() - 2].x(), 2 * points[points.size() - 1].y() - points[points.size() - 2].y()));
+  int s = points.size();
+  for (int j = 0; j < s - 3; ++j) {
+    Point<int> p1, p2;
+    p2.setx(std::round((1.0 / 6.0) * (points[j].x() + 4 * points[j + 1].x() + points[j + 2].x())));
+    p2.sety(std::round((1.0 / 6.0) * (points[j].y() + 4 * points[j + 1].y() + points[j + 2].y())));
+    t = tau;
+    while (t < 1) {
+      p1 = p2;
+      p2.setx(std::round((1.0 / 6.0) * (std::pow(1 - t, 3) * points[j].x() + (3 * std::pow(t, 3) - 6 * std::pow(t, 2) + 4) * points[j + 1].x() +
+                                        (-3 * std::pow(t, 3) + 3 * std::pow(t, 2) + 3 * t + 1) * points[j + 2].x() + std::pow(t, 3) * points[j + 3].x())));
+      p2.sety(std::round((1.0 / 6.0) * (std::pow(1 - t, 3) * points[j].y() + (3 * std::pow(t, 3) - 6 * std::pow(t, 2) + 4) * points[j + 1].y() +
+                                        (-3 * std::pow(t, 3) + 3 * std::pow(t, 2) + 3 * t + 1) * points[j + 2].y() + std::pow(t, 3) * points[j + 3].y())));
+      t += tau;
+      lineBresenham(p1, p2, color);
+    }
+    Point<int> tmp(std::round((1.0 / 6.0) * (points[j + 1].x() + 4 * points[j + 2].x() + points[j + 3].x())),
+                   std::round((1.0 / 6.0) * (points[j + 1].y() + 4 * points[j + 2].y() + points[j + 3].y())));
+    lineBresenham(p2, tmp, color);
+    tmp.print();
+  }
 }
 
 bool WinInstance::clipLineCyrusBeck(const std::vector<Point<int>>& polygon, const Point<int>& p1, const Point<int>& p2, Point<int>& p1_new, Point<int>& p2_new) {

@@ -13,7 +13,7 @@ enum class pointType { LEFT, RIGHT, BEHIND, BETWEEN, ORIGIN, DESTINATION };
 enum class interceptionType { SAME, PARALLEL, CROSS, NO_CROSS };
 enum class pointTypeToPolygonEdge { TOUCHING, CROSS_LEFT, CROSS_RIGHT, INESSENTIAL };
 enum class pointToPolygonType { INSIDE, OUTSIDE };
-enum class methods { EO, NZW };
+enum class methods { EO, NZW, NONEXTERIOR };
 enum class clockWiseType { CW, CCW, NONCONVEX };
 
 class WinInstance {
@@ -66,6 +66,8 @@ class WinInstance {
 
   void curveBezier3(const std::vector<Point<int>>& points, const sf::Color& color);
 
+  void curveBspline3(std::vector<Point<int>>& points, const sf::Color& color);
+
   clockWiseType checkClockWise(const std::vector<Point<int>>& vertex);
 
   bool clipLineCyrusBeck(const std::vector<Point<int>>& polygon, const Point<int>& p1, const Point<int>& p2, Point<int>& p1_new, Point<int>& p2_new);
@@ -98,6 +100,17 @@ class Point {
   }
   friend Point<T> operator+(const Point<T>& p1, const Point<T>& p2) { return Point(p1.x() + p2.x(), p1.y() + p2.y()); }
   friend Point<T> operator-(const Point<T>& p1, const Point<T>& p2) { return Point(p1.x() - p2.x(), p1.y() - p2.y()); }
+};
+
+template <typename T>
+class Edge {
+  private:
+   Point<T> a;
+   Point<T> b;
+  
+  public:
+   Edge() : a(), b() {}
+   Edge(Point<T> a_, Point<T> b_): a(a_.x(), a_.y()), b(b_.x(), b_.y()) {}
 };
 
 template <typename T>
