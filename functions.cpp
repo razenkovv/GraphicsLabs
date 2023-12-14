@@ -393,3 +393,53 @@ bool WinInstance::clipLineCyrusBeck(const std::vector<Point<int>>& polygon, cons
   }
   return false;
 }
+
+void WinInstance::parallelProjection(Hex<int>& hex, const sf::Color& color) {
+  std::vector<Face<int>> faces = hex.getFaces();
+  for (const Face<int>& f : faces) {
+    for (int i = 0; i < f.size() - 1; ++i) {
+      auto p0 = f.get(i);
+      auto p1 = f.get(i + 1);
+      auto p0_z = Point(p0.x(), p0.y());
+      auto p1_z = Point(p1.x(), p1.y());
+      lineBresenham(p0_z, p1_z, color);
+    }
+    auto p0 = f.get(f.size() - 1);
+    auto p1 = f.get(0);
+    auto p0_z = Point(p0.x(), p0.y());
+    auto p1_z = Point(p1.x(), p1.y());
+    lineBresenham(p0_z, p1_z, color);
+  }
+}
+
+void WinInstance::rotate(Hex<int>& hex, const Point3D<double>& vector, double phi) {
+  auto points = hex.getPoints();
+  std::vector<Point3D<int>> res_points;
+  res_points.reserve(hex.getnPoints());
+
+  double vector_len = sqrt(std::pow(vector.x(), 2) + std::pow(vector.y(), 2) + std::pow(vector.z(), 2));
+  Point3D n(vector.x() / vector_len, vector.y() / vector_len, vector.z() / vector_len);
+  
+  n.print();
+
+  Eigen::MatrixXd rotateMatrix(3, 3);
+  rotateMatrix(0, 0) = cos(phi) + n.x() * n.x() * (1 - cos(phi));
+  rotateMatrix(0, 1) = n.x() * n.y() * (1 - cos(phi)) + n.z() * sin(phi);
+  rotateMatrix(0, 2) = n.x() * n.z() * (1 - cos(phi)) - n.y() * sin(phi);
+  rotateMatrix(1, 0) = n.x() * n.y() * (1 - cos(phi)) - n.z() * sin(phi);
+  rotateMatrix(1, 1) = cos(phi) + n.y() * n.y() * (1 - cos(phi));
+  rotateMatrix(1, 2) = n.y() * n.z() * (1 - cos(phi)) + n.x() * sin(phi);
+  rotateMatrix(2, 0) = n.x() * n.z() * (1 - cos(phi)) + n.y() * sin(phi);
+  rotateMatrix(2, 1) = n.y() * n.z() * (1 - cos(phi)) - n.x() * sin(phi);
+  rotateMatrix(2, 2) = cos(phi) + n.z() * n.z() * (1 - cos(phi));
+
+  std::cout << rotateMatrix << "\n";
+
+  for (int i = 0; i < hex.getnPoints(); ++i) {
+    Eigen::Vector3d v(points[i].x(), points[i].y(), points[i].z());
+    auto res_v = v.transpose() * rotateMatrix;
+    Point3D<int> res_p(std::round(res_v.x()), std::round(res_v.y()), std::round(res_v.z()));
+    res_points.push_back(res_p);
+  }
+  hex.setPoints(res_points);
+}

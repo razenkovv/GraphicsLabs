@@ -1,13 +1,22 @@
 #pragma once
 
+#include <Eigen/Dense>
 #include <SFML/Graphics.hpp>
+#include <iostream>
 #include <string>
 #include <vector>
 
-#include <iostream>
-
 template <typename T>
 class Point;
+
+template <typename T>
+class Face;
+
+template <typename T>
+class Hex;
+
+template <typename T>
+class Point3D;
 
 enum class pointType { LEFT, RIGHT, BEHIND, BETWEEN, ORIGIN, DESTINATION };
 enum class interceptionType { SAME, PARALLEL, CROSS, NO_CROSS };
@@ -71,6 +80,10 @@ class WinInstance {
   clockWiseType checkClockWise(const std::vector<Point<int>>& vertex);
 
   bool clipLineCyrusBeck(const std::vector<Point<int>>& polygon, const Point<int>& p1, const Point<int>& p2, Point<int>& p1_new, Point<int>& p2_new);
+
+  void parallelProjection(Hex<int>& hex, const sf::Color& color);
+
+  void rotate(Hex<int>& hex, const Point3D<double>& vector, double phi);
 };
 
 template <typename T>
@@ -103,14 +116,113 @@ class Point {
 };
 
 template <typename T>
+class Point3D {
+ private:
+  T x_coord;
+  T y_coord;
+  T z_coord;
+
+ public:
+  Point3D() : x_coord(0), y_coord(0), z_coord(0) {}
+  Point3D(T x_, T y_, T z_) : x_coord(x_), y_coord(y_), z_coord(z_) {}
+  Point3D(const Point3D<T>& p) : x_coord(p.x()), y_coord(p.y()), z_coord(p.z()) {}
+  T x() const { return x_coord; }
+  T y() const { return y_coord; }
+  T z() const { return z_coord; }
+  void setx(T x_) { x_coord = x_; }
+  void sety(T y_) { y_coord = y_; }
+  void setz(T z_) { z_coord = z_; }
+  void print() const { std::cout << x_coord << " " << y_coord << " " << z_coord << std::endl; }
+  Point3D<T>& operator=(const Point3D<T>& p) {
+    x_coord = p.x();
+    y_coord = p.y();
+    z_coord = p.z();
+    return *this;
+  }
+  friend Point<T> operator+(const Point3D<T>& p1, const Point3D<T>& p2) { return Point3D(p1.x() + p2.x(), p1.y() + p2.y(), p1.z() + p2.z()); }
+  friend Point<T> operator-(const Point3D<T>& p1, const Point3D<T>& p2) { return Point3D(p1.x() - p2.x(), p1.y() - p2.y(), p1.z() - p2.z()); }
+};
+
+template <typename T>
+class Face {
+ private:
+  std::vector<Point3D<T>> points;
+
+ public:
+  Face(std::vector<Point3D<T>>& points_) : points(points_) {}
+  int size() const { return points.size(); }
+  Point3D<T> get(int i) const { return points[i]; }
+  void print() {
+    for (auto p : points) {
+      p.print();
+    }
+  }
+};
+
+template <typename T>
+class Hex {
+ private:
+  std::vector<Face<T>> faces;
+  std::vector<Point3D<T>> points;
+  int nFaces = 6;
+  int nPoints = 8;
+
+ public:
+  Hex(std::vector<Point3D<T>>& points) : points(points) {  // [0,1,2,3] - lower face; [4,5,6,7] - upper face
+    auto points0 = std::vector<Point3D<T>>{points[0], points[3], points[2], points[1]};
+    auto face0 = Face(points0);
+    auto points1 = std::vector<Point3D<T>>{points[5], points[6], points[7], points[4]};
+    auto face1 = Face(points1);
+    auto points2 = std::vector<Point3D<T>>{points[1], points[2], points[6], points[5]};
+    auto face2 = Face(points2);
+    auto points3 = std::vector<Point3D<T>>{points[0], points[4], points[7], points[3]};
+    auto face3 = Face(points3);
+    auto points4 = std::vector<Point3D<T>>{points[0], points[3], points[2], points[1]};
+    auto face4 = Face(points4);
+    auto points5 = std::vector<Point3D<T>>{points[5], points[6], points[7], points[4]};
+    auto face5 = Face(points5);
+    faces.insert(faces.end(), {face0, face1, face2, face3, face4, face5});
+  }
+
+  void print() {
+    faces[0].print();
+    faces[1].print();
+  }
+
+  std::vector<Face<T>> getFaces() { return faces; }
+  std::vector<Point3D<T>> getPoints() { return points; }
+  int getnPoints() { return nPoints; }
+  int getnFaces() { return nFaces; }
+
+  void setPoints(std::vector<Point3D<int>> new_points) {
+    points.clear();
+    faces.clear();
+    points.insert(points.begin(), new_points.begin(), new_points.end());
+    auto points0 = std::vector<Point3D<T>>{points[0], points[3], points[2], points[1]};
+    auto face0 = Face(points0);
+    auto points1 = std::vector<Point3D<T>>{points[5], points[6], points[7], points[4]};
+    auto face1 = Face(points1);
+    auto points2 = std::vector<Point3D<T>>{points[1], points[2], points[6], points[5]};
+    auto face2 = Face(points2);
+    auto points3 = std::vector<Point3D<T>>{points[0], points[4], points[7], points[3]};
+    auto face3 = Face(points3);
+    auto points4 = std::vector<Point3D<T>>{points[0], points[3], points[2], points[1]};
+    auto face4 = Face(points4);
+    auto points5 = std::vector<Point3D<T>>{points[5], points[6], points[7], points[4]};
+    auto face5 = Face(points5);
+    faces.insert(faces.end(), {face0, face1, face2, face3, face4, face5});
+  }
+};
+
+template <typename T>
 class Edge {
-  private:
-   Point<T> a;
-   Point<T> b;
-  
-  public:
-   Edge() : a(), b() {}
-   Edge(Point<T> a_, Point<T> b_): a(a_.x(), a_.y()), b(b_.x(), b_.y()) {}
+ private:
+  Point<T> a;
+  Point<T> b;
+
+ public:
+  Edge() : a(), b() {}
+  Edge(Point<T> a_, Point<T> b_) : a(a_.x(), a_.y()), b(b_.x(), b_.y()) {}
 };
 
 template <typename T>
