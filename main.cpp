@@ -5,8 +5,7 @@
 
 #define M_PI 3.14159265358979323846
 
-    int
-    main() {
+int main() {
   sf::RenderWindow window(sf::VideoMode(800, 600), "Window");
 
   WinInstance w(window);
@@ -115,26 +114,31 @@
   // w.curveBspline3(points1, sf::Color::Red);
 
   // 3D Parallelepiped
-  std::vector<Point3D<int>> points =
-      std::vector<Point3D<int>>{Point3D(300, 300, 100), Point3D(400, 300, 100), Point3D(400, 400, 100), Point3D(300, 400, 100),
-                                Point3D(300, 300, 200), Point3D(400, 300, 200), Point3D(400, 400, 200), Point3D(300, 400, 200)};
-  Hex<int> hex(points);
-  w.parallelProjection(hex, sf::Color::Black);
-  // w.lineBresenham(Point(points[0].x(), points[0].y()), Point(points[2].x(), points[2].y()), sf::Color::Green);
-  w.rotate(hex, Point3D(3.,1.,1.), M_PI/6);
-  points = hex.getPoints();
-  // w.lineBresenham(Point(points[0].x(), points[0].y()), Point(points[2].x(), points[2].y()), sf::Color::Green);
-  w.parallelProjection(hex, sf::Color::Red);
+  auto points = std::vector<Point3D<double>>{Point3D(400., 300., 100.), Point3D(500., 300., 100.), Point3D(500., 400., 100.), Point3D(400., 400., 100.),
+                                             Point3D(400., 300., 200.), Point3D(500., 300., 200.), Point3D(500., 400., 200.), Point3D(400., 400., 200.)};
+  // Hex hex(points);
+  // // w.parallelProjection(hex, sf::Color::Black, true);
+  // w.rotate(hex, Point3D(3.,1.,1.), M_PI/6);
+  // w.parallelProjection(hex, sf::Color::Red, true);
+  // // w.perspectiveProjection(hex, 500., sf::Color::Blue, true);
 
-  w.saveImage("image.png");
-  w.drawImage();
+  // w.saveImage("image.png", false);
+  // w.drawImage();
 
-  while (w.isOpen()) {
-    sf::Event event;
-    while (w.pollEvent(event)) {
-      if (event.type == sf::Event::Closed)
-        w.close();
-    }
+  // while (w.isOpen()) {
+  //   sf::Event event;
+  //   while (w.pollEvent(event)) {
+  //     if (event.type == sf::Event::Closed)
+  //       w.close();
+  //   }
+  // }
+
+  Hex hex(points);
+  for (int i = 0; i < 200; ++i) {
+    w.perspectiveProjection(hex, 500., sf ::Color::Red, true);
+    w.rotate(hex, Point3D(3., 3.1, 2.5), M_PI / 100);
+    w.saveImage("images/image" + std::to_string(i) + ".png", true);
+    w.clear(sf::Color::White);
   }
 
   return 0;

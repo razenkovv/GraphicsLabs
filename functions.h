@@ -12,7 +12,6 @@ class Point;
 template <typename T>
 class Face;
 
-template <typename T>
 class Hex;
 
 template <typename T>
@@ -71,7 +70,7 @@ class WinInstance {
 
   void fillPolygon(const std::vector<Point<int>>& polygon, const methods& method, const sf::Color& color);
 
-  bool saveImage(const std::string& filename);
+  bool saveImage(const std::string& filename, bool update);
 
   void curveBezier3(const std::vector<Point<int>>& points, const sf::Color& color);
 
@@ -81,9 +80,13 @@ class WinInstance {
 
   bool clipLineCyrusBeck(const std::vector<Point<int>>& polygon, const Point<int>& p1, const Point<int>& p2, Point<int>& p1_new, Point<int>& p2_new);
 
-  void parallelProjection(Hex<int>& hex, const sf::Color& color);
+  void parallelProjection(Hex& hex, const sf::Color& color, bool onlyVisible);
 
-  void rotate(Hex<int>& hex, const Point3D<double>& vector, double phi);
+  void perspectiveProjection(Hex& hex, double k, const sf::Color& color, bool onlyVisible);
+
+  void rotate(Hex& hex, const Point3D<double>& vector, double phi);
+
+  std::vector<bool> backFaceCulling(Hex& hex);
 };
 
 template <typename T>
@@ -159,58 +162,55 @@ class Face {
   }
 };
 
-template <typename T>
 class Hex {
  private:
-  std::vector<Face<T>> faces;
-  std::vector<Point3D<T>> points;
+  std::vector<Face<double>> faces;
+  std::vector<Point3D<double>> normals;  // outer normals
+  std::vector<Point3D<double>> points;
   int nFaces = 6;
   int nPoints = 8;
 
  public:
-  Hex(std::vector<Point3D<T>>& points) : points(points) {  // [0,1,2,3] - lower face; [4,5,6,7] - upper face
-    auto points0 = std::vector<Point3D<T>>{points[0], points[3], points[2], points[1]};
-    auto face0 = Face(points0);
-    auto points1 = std::vector<Point3D<T>>{points[5], points[6], points[7], points[4]};
-    auto face1 = Face(points1);
-    auto points2 = std::vector<Point3D<T>>{points[1], points[2], points[6], points[5]};
-    auto face2 = Face(points2);
-    auto points3 = std::vector<Point3D<T>>{points[0], points[4], points[7], points[3]};
-    auto face3 = Face(points3);
-    auto points4 = std::vector<Point3D<T>>{points[0], points[3], points[2], points[1]};
-    auto face4 = Face(points4);
-    auto points5 = std::vector<Point3D<T>>{points[5], points[6], points[7], points[4]};
-    auto face5 = Face(points5);
-    faces.insert(faces.end(), {face0, face1, face2, face3, face4, face5});
-  }
+  Hex(std::vector<Point3D<double>>& _points) { setPoints(_points); }  // [0,1,2,3] - lower face; [4,5,6,7] - upper face
 
   void print() {
     faces[0].print();
     faces[1].print();
   }
 
-  std::vector<Face<T>> getFaces() { return faces; }
-  std::vector<Point3D<T>> getPoints() { return points; }
+  std::vector<Face<double>> getFaces() { return faces; }
+  std::vector<Point3D<double>> getPoints() { return points; }
+  std::vector<Point3D<double>> getNormals() { return normals; }
+
   int getnPoints() { return nPoints; }
   int getnFaces() { return nFaces; }
 
-  void setPoints(std::vector<Point3D<int>> new_points) {
+  void setPoints(std::vector<Point3D<double>> new_points) {
     points.clear();
     faces.clear();
+    normals.clear();
     points.insert(points.begin(), new_points.begin(), new_points.end());
-    auto points0 = std::vector<Point3D<T>>{points[0], points[3], points[2], points[1]};
+    faces.reserve(nFaces);
+    normals.reserve(nFaces);
+
+    routine(points, faces, normals, 0, 3, 2, 1);
+    routine(points, faces, normals, 5, 6, 7, 4);
+    routine(points, faces, normals, 1, 2, 6, 5);
+    routine(points, faces, normals, 0, 4, 7, 3);
+    routine(points, faces, normals, 0, 1, 5, 4);
+    routine(points, faces, normals, 3, 7, 6, 2);
+  }
+
+  void routine(std::vector<Point3D<double>>& points, std::vector<Face<double>>& faces, std::vector<Point3D<double>>& normals, int p0, int p1, int p2, int p3) {
+    auto points0 = std::vector<Point3D<double>>{points[p0], points[p1], points[p2], points[p3]};
     auto face0 = Face(points0);
-    auto points1 = std::vector<Point3D<T>>{points[5], points[6], points[7], points[4]};
-    auto face1 = Face(points1);
-    auto points2 = std::vector<Point3D<T>>{points[1], points[2], points[6], points[5]};
-    auto face2 = Face(points2);
-    auto points3 = std::vector<Point3D<T>>{points[0], points[4], points[7], points[3]};
-    auto face3 = Face(points3);
-    auto points4 = std::vector<Point3D<T>>{points[0], points[3], points[2], points[1]};
-    auto face4 = Face(points4);
-    auto points5 = std::vector<Point3D<T>>{points[5], points[6], points[7], points[4]};
-    auto face5 = Face(points5);
-    faces.insert(faces.end(), {face0, face1, face2, face3, face4, face5});
+    auto v1 = Eigen::Vector3d(points[p1].x() - points[p0].x(), points[p1].y() - points[p0].y(), points[p1].z() - points[p0].z());
+    auto v2 = Eigen::Vector3d(points[p3].x() - points[p0].x(), points[p3].y() - points[p0].y(), points[p3].z() - points[p0].z());
+    auto res_v = v1.cross(v2);
+    double normal0_len = sqrt(std::pow(res_v.x(), 2) + std::pow(res_v.y(), 2) + std::pow(res_v.z(), 2));
+    auto normal0 = Point3D<double>(res_v.x() / normal0_len, res_v.y() / normal0_len, res_v.z() / normal0_len);
+    faces.push_back(face0);
+    normals.push_back(normal0);
   }
 };
 

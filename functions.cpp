@@ -18,11 +18,29 @@ void WinInstance::drawImage(bool update) {
     sprite.setTexture(texture);
     window.draw(sprite);
     window.display();
+    image.create(window.getSize().x, window.getSize().y, sf::Color::White);
   } else {
     window.clear(sf::Color::White);
     window.draw(sprite);
     window.display();
   }
+}
+
+bool WinInstance::saveImage(const std::string& filename, bool update) {
+  bool flag = image.saveToFile(filename);
+  if (update) {
+    window.clear(sf::Color::White);
+    texture.update(image);
+    sprite.setTexture(texture);
+    window.draw(sprite);
+    window.display();
+    image.create(window.getSize().x, window.getSize().y, sf::Color::White);
+  } else {
+    window.clear(sf::Color::White);
+    window.draw(sprite);
+    window.display();
+  }
+  return flag;
 }
 
 void WinInstance::display() {
@@ -294,10 +312,6 @@ void WinInstance::fillPolygon(const std::vector<Point<int>>& polygon, const meth
   }
 }
 
-bool WinInstance::saveImage(const std::string& filename) {
-  return image.saveToFile(filename);
-}
-
 void WinInstance::curveBezier3(const std::vector<Point<int>>& points, const sf::Color& color) {
   if (points.size() != 4) {
     throw std::runtime_error("\n(curveBezier3) Cubic Bézier curves are plotted for 4 points.");
@@ -394,35 +408,77 @@ bool WinInstance::clipLineCyrusBeck(const std::vector<Point<int>>& polygon, cons
   return false;
 }
 
-void WinInstance::parallelProjection(Hex<int>& hex, const sf::Color& color) {
-  std::vector<Face<int>> faces = hex.getFaces();
-  for (const Face<int>& f : faces) {
-    for (int i = 0; i < f.size() - 1; ++i) {
-      auto p0 = f.get(i);
-      auto p1 = f.get(i + 1);
-      auto p0_z = Point(p0.x(), p0.y());
-      auto p1_z = Point(p1.x(), p1.y());
+void WinInstance::parallelProjection(Hex& hex, const sf::Color& color, bool onlyVisible) {
+  auto faces = hex.getFaces();
+  std::vector<bool> vis_faces;
+  vis_faces.resize(hex.getnFaces(), true);
+  if (onlyVisible)
+    vis_faces = backFaceCulling(hex);
+
+  for (int j = 0; j < faces.size(); ++j) {
+    if (vis_faces[j]) {
+      auto f = faces[j];
+      for (int i = 0; i < f.size() - 1; ++i) {
+        auto p0 = f.get(i);
+        auto p1 = f.get(i + 1);
+        auto p0_z = Point<int>(std::round(p0.x()), std::round(p0.y()));
+        auto p1_z = Point<int>(std::round(p1.x()), std::round(p1.y()));
+        lineBresenham(p0_z, p1_z, color);
+      }
+      auto p0 = f.get(f.size() - 1);
+      auto p1 = f.get(0);
+      auto p0_z = Point<int>(std::round(p0.x()), std::round(p0.y()));
+      auto p1_z = Point<int>(std::round(p1.x()), std::round(p1.y()));
       lineBresenham(p0_z, p1_z, color);
     }
-    auto p0 = f.get(f.size() - 1);
-    auto p1 = f.get(0);
-    auto p0_z = Point(p0.x(), p0.y());
-    auto p1_z = Point(p1.x(), p1.y());
-    lineBresenham(p0_z, p1_z, color);
   }
 }
 
-void WinInstance::rotate(Hex<int>& hex, const Point3D<double>& vector, double phi) {
+void WinInstance::perspectiveProjection(Hex& hex, double k, const sf::Color& color, bool onlyVisible) {  // center in (0, 0, k)
+  double r = 1 / k;
   auto points = hex.getPoints();
-  std::vector<Point3D<int>> res_points;
+  std::vector<Point3D<double>> new_points;
+  new_points.reserve(hex.getnFaces());
+  for (auto p : points) {
+      double denom = r * p.z() + 1;
+      new_points.push_back(Point3D<double>(p.x() / denom, p.y() / denom, p.z() / denom));
+  }
+
+  Hex new_hex(new_points);
+  auto faces = new_hex.getFaces();
+  std::vector<bool> vis_faces;
+  vis_faces.resize(new_hex.getnFaces(), true);
+  if (onlyVisible)
+    vis_faces = backFaceCulling(new_hex);
+
+  for (int j = 0; j < faces.size(); ++j) {
+    if (vis_faces[j]) {
+      auto f = faces[j];
+      for (int i = 0; i < f.size() - 1; ++i) {
+        auto p0 = f.get(i);
+        auto p1 = f.get(i + 1);
+        auto p0_proj = Point<int>(std::round(p0.x()), std::round(p0.y()));
+        auto p1_proj = Point<int>(std::round(p1.x()), std::round(p1.y()));
+        lineBresenham(p0_proj, p1_proj, color);
+      }
+      auto p0 = f.get(f.size() - 1);
+      auto p1 = f.get(0);
+      auto p0_proj = Point<int>(std::round(p0.x()), std::round(p0.y()));
+      auto p1_proj = Point<int>(std::round(p1.x()), std::round(p1.y()));
+      lineBresenham(p0_proj, p1_proj, color);
+    }
+  }
+}
+
+void WinInstance::rotate(Hex& hex, const Point3D<double>& vector, double phi) {
+  auto points = hex.getPoints();
+  std::vector<Point3D<double>> res_points;
   res_points.reserve(hex.getnPoints());
 
   double vector_len = sqrt(std::pow(vector.x(), 2) + std::pow(vector.y(), 2) + std::pow(vector.z(), 2));
   Point3D n(vector.x() / vector_len, vector.y() / vector_len, vector.z() / vector_len);
-  
-  n.print();
 
-  Eigen::MatrixXd rotateMatrix(3, 3);
+  Eigen::Matrix3d rotateMatrix;
   rotateMatrix(0, 0) = cos(phi) + n.x() * n.x() * (1 - cos(phi));
   rotateMatrix(0, 1) = n.x() * n.y() * (1 - cos(phi)) + n.z() * sin(phi);
   rotateMatrix(0, 2) = n.x() * n.z() * (1 - cos(phi)) - n.y() * sin(phi);
@@ -433,13 +489,26 @@ void WinInstance::rotate(Hex<int>& hex, const Point3D<double>& vector, double ph
   rotateMatrix(2, 1) = n.y() * n.z() * (1 - cos(phi)) - n.x() * sin(phi);
   rotateMatrix(2, 2) = cos(phi) + n.z() * n.z() * (1 - cos(phi));
 
-  std::cout << rotateMatrix << "\n";
-
   for (int i = 0; i < hex.getnPoints(); ++i) {
     Eigen::Vector3d v(points[i].x(), points[i].y(), points[i].z());
     auto res_v = v.transpose() * rotateMatrix;
-    Point3D<int> res_p(std::round(res_v.x()), std::round(res_v.y()), std::round(res_v.z()));
+    Point3D<double> res_p(res_v.x(), res_v.y(), res_v.z());
     res_points.push_back(res_p);
   }
   hex.setPoints(res_points);
+}
+
+std::vector<bool> WinInstance::backFaceCulling(Hex& hex) {
+  std::vector<bool> vis_faces;
+  vis_faces.resize(hex.getnFaces());
+  auto normals = hex.getNormals();
+  auto view_vector = Eigen::Vector3d(0., 0., -1.);
+  for (int i = 0; i < normals.size(); ++i) {
+    auto v = Eigen::Vector3d(normals[i].x(), normals[i].y(), normals[i].z());
+    if (v.dot(view_vector) < 0)
+      vis_faces[i] = true;
+    else
+      vis_faces[i] = false;
+  }
+  return vis_faces;
 }
