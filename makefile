@@ -1,6 +1,6 @@
 OBJ = main.o functions.o
 TARGET = task
-EIGEN_PATH = ~/eigen/eigen-3.4.0/ 
+EIGEN_PATH = ~/eigen/eigen-3.4.0/
 
 all: $(OBJ) link
 
